@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compta PME — Saisie simplifiée SYSCOHADA</title>
+<style>
+  :root{
+    --bg:#F5F6F4; --panel:#FFFFFF; --ink:#1C2B24; --ink-soft:#5B6B62;
+    --line:#DDE3DE; --accent:#0F6E56; --accent-soft:#E1F5EE; --accent-dark:#085041;
+    --warn:#BA7517; --warn-bg:#FAEEDA; --danger:#A32D2D; --danger-bg:#FCEBEB;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.5;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:20px 16px 60px;}
+  h1,h2,h3{font-weight:600;margin:0 0 4px;}
+  h1{font-size:20px;}
+  h2{font-size:16px;}
+  .muted{color:var(--ink-soft);font-size:13px;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:10px 16px;border-radius:8px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);font-size:14px;font-weight:500;cursor:pointer;
+  }
+  .btn:hover{background:#F0F2F0;}
+  .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .btn-primary:hover{background:var(--accent-dark);}
+  .btn-block{width:100%;}
+  .btn-ghost{border:none;background:none;color:var(--accent-dark);padding:6px 8px;}
+  input,select{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);
+    font-size:15px;background:#fff;color:var(--ink);
+  }
+  label{display:block;font-size:13px;color:var(--ink-soft);margin-bottom:4px;font-weight:500;}
+  .field{margin-bottom:12px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap;}
+  .tab{padding:10px 14px;font-size:14px;font-weight:500;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;}
+  .tab.active{color:var(--accent-dark);border-bottom-color:var(--accent);}
+  .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:500;}
+  .pill-green{background:var(--accent-soft);color:var(--accent-dark);}
+  .pill-warn{background:var(--warn-bg);color:var(--warn);}
+  .pill-red{background:var(--danger-bg);color:var(--danger);}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{text-align:left;padding:8px 6px;color:var(--ink-soft);font-weight:500;border-bottom:1px solid var(--line);font-size:12px;text-transform:uppercase;letter-spacing:.02em;}
+  td{padding:9px 6px;border-bottom:1px solid var(--line);}
+  tr:last-child td{border-bottom:none;}
+  .num{text-align:right;font-variant-numeric:tabular-nums;}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+  .stat{background:var(--bg);border-radius:8px;padding:12px 14px;}
+  .stat .val{font-size:20px;font-weight:600;margin-top:2px;}
+  .stat .lbl{font-size:12px;color:var(--ink-soft);}
+  .choice-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+  .choice{
+    border:1px solid var(--line);border-radius:8px;padding:12px;cursor:pointer;
+    background:#fff;font-size:14px;font-weight:500;text-align:left;
+  }
+  .choice:hover{border-color:var(--accent);background:var(--accent-soft);}
+  .choice small{display:block;color:var(--ink-soft);font-weight:400;font-size:11.5px;margin-top:2px;}
+  .flow-toggle{display:flex;gap:8px;margin-bottom:16px;}
+  .flow-btn{flex:1;padding:10px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:13.5px;font-weight:500;text-align:center;}
+  .flow-btn.active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-dark);}
+  .empty{text-align:center;padding:30px 10px;color:var(--ink-soft);}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+  .company-badge{font-size:13px;color:var(--ink-soft);}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13.5px;z-index:50;}
+  .hidden{display:none !important;}
+  .amount-suggest{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .amount-suggest button{padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:#fff;font-size:12.5px;cursor:pointer;}
+  .divider{height:1px;background:var(--line);margin:16px 0;}
+  .locked-badge{font-size:11px;color:var(--ink-soft);}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+/* ---------- Données métier : socle SYSCOHADA + packs sectoriels ---------- */
+
+const MODES_PAIEMENT = [
+  {id:'espece', label:'Espèces', compte:'571.1 Caisse'},
+  {id:'om', label:'Orange Money', compte:'571.2 OM'},
+  {id:'momo', label:'MTN MoMo', compte:'571.3 MoMo'},
+  {id:'banque', label:'Banque', compte:'512 Banque'},
+];
+
+// sens: 'entree' = argent qui rentre (mode de paiement au débit) ; 'sortie' = argent qui sort (mode de paiement au crédit)
+// impact: 'produit' | 'charge' | 'neutre' (mouvement de bilan sans effet sur le résultat)
+const SOCLE_COMMUN = [
+  {id:'loyer', label:'Paiement loyer', sens:'sortie', compte:'613 Locations', impact:'charge'},
+  {id:'eau_elec', label:'Facture eau / électricité', sens:'sortie', compte:'605 Autres achats', impact:'charge'},
+  {id:'salaire', label:'Salaire payé', sens:'sortie', compte:'661 Charges de personnel', impact:'charge'},
+  {id:'avance_salaire', label:'Avance sur salaire', sens:'sortie', compte:'421 Personnel — avances', impact:'neutre'},
+  {id:'reglement_fournisseur', label:'Règlement fournisseur (dette déjà due)', sens:'sortie', compte:'401 Fournisseurs', impact:'neutre', contact:true, lookup:'fournisseur'},
+  {id:'achat_credit_fournisseur', label:'Achat à crédit (marchandises / fournitures)', sens:'dette', compte:'401 Fournisseurs', impact:'charge', contact:true},
+  {id:'vente_credit_client', label:'Vente / prestation à crédit (client)', sens:'creance', compte:'411 Clients', impact:'produit', contact:true},
+  {id:'encaissement_client', label:'Encaissement client (règlement d\'une créance)', sens:'entree', compte:'411 Clients', impact:null, contact:true, lookup:'client'},
+  {id:'transport', label:'Transport / livraison', sens:'sortie', compte:'624 Transports', impact:'charge'},
+  {id:'entretien', label:'Entretien / réparation', sens:'sortie', compte:'624 Entretien et réparations', impact:'charge'},
+  {id:'publicite', label:'Publicité / marketing', sens:'sortie', compte:'623 Publicité', impact:'charge'},
+  {id:'taxes', label:'Patente / taxes', sens:'sortie', compte:'646 Droits et taxes', impact:'charge'},
+  {id:'equipement', label:'Achat matériel / équipement', sens:'sortie', compte:'245 Matériel et outillage', impact:'neutre'},
+  {id:'retrait_gerant', label:'Retrait du gérant', sens:'sortie', compte:"108 Compte de l'exploitant", impact:'neutre'},
+  {id:'frais_mobile', label:'Frais de transfert Mobile Money', sens:'sortie', compte:'627 Frais bancaires', impact:'charge'},
+  {id:'depot_banque', label:'Dépôt d\'espèces en banque', sens:'transfert', impact:'neutre'},
+  {id:'retrait_banque', label:'Retrait de banque vers caisse', sens:'transfert_inverse', impact:'neutre'},
+];
+
+const SECTEURS = {
+  restauration: {
+    label:'Restauration / Snack-bar',
+    transactions:[
+      {id:'vente', label:'Vente au comptant', sens:'entree', compte:'707 Ventes de marchandises', impact:'produit'},
+      {id:'achat_marchandise', label:'Achat de denrées / marchandises', sens:'sortie', compte:'601 Achats de marchandises', impact:'charge'},
+      {id:'perte', label:'Perte / casse marchandises constatée', sens:'aucun_mode', compte:'658 Charges diverses', impact:'charge'},
+    ]
+  },
+  beaute: {
+    label:'Institut de beauté',
+    transactions:[
+      {id:'prestation', label:'Prestation encaissée', sens:'entree', compte:'706 Services vendus', impact:'produit'},
+      {id:'achat_produits', label:'Achat de produits (cosmétiques)', sens:'sortie', compte:'601 Achats', impact:'charge'},
+    ]
+  },
+  commerce: {
+    label:'Commerce général / Boutique',
+    transactions:[
+      {id:'vente', label:'Vente au comptant', sens:'entree', compte:'707 Ventes de marchandises', impact:'produit'},
+      {id:'achat_marchandise', label:'Achat de marchandises pour revente', sens:'sortie', compte:'601 Achats de marchandises', impact:'charge'},
+      {id:'perte', label:'Perte / vol marchandise constaté', sens:'aucun_mode', compte:'658 Charges diverses', impact:'charge'},
+      {id:'emprunt', label:'Remboursement emprunt', sens:'sortie', compte:'162 Emprunts', impact:'neutre'},
+    ]
+  },
+};
+
+function getTransactionsForSecteur(secteurId){
+  const secteur = SECTEURS[secteurId];
+  return [...secteur.transactions, ...SOCLE_COMMUN];
+}
+
+/* ---------- État applicatif ---------- */
+
+let state = {
+  screen:'loading', // loading | select-entreprise | new-entreprise | login | dashboard
+  entreprises:[], // {id, nom, secteur, password}
+  currentEntrepriseId:null,
+  currentTab:'saisie', // saisie | journal | etats | inventaire
+  flowMode:'transaction', // 'transaction' first ou 'montant' first
+  saisieStep:1,
+  saisieModePaiement:null,
+  saisieTransactionId:null,
+  saisieMontant:'',
+  saisieContactNom:'',
+  saisieContactTel:'',
+  ecritures:[], // écritures de l'entreprise courante, chargées depuis le storage
+  loginPasswordInput:'',
+  loginError:false,
+  newEntreprise:{nom:'', secteur:'restauration', password:'', stockInitial:'', soldeEspece:'', soldeOm:'', soldeMomo:'', soldeBanque:''},
+  editingEcritureId:null,
+  editingMontantValue:'',
+};
+
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  if(state.screen==='loading') app.appendChild(renderLoading());
+  else if(state.screen==='select-entreprise') app.appendChild(renderSelectEntreprise());
+  else if(state.screen==='new-entreprise') app.appendChild(renderNewEntreprise());
+  else if(state.screen==='login') app.appendChild(renderLogin());
+  else if(state.screen==='dashboard') app.appendChild(renderDashboard());
+}
+
+function el(tag, attrs={}, children=[]){
+  const e = document.createElement(tag);
+  for(const k in attrs){
+    if(k==='class') e.className = attrs[k];
+    else if(k==='html') e.innerHTML = attrs[k];
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2), attrs[k]);
+    else e.setAttribute(k, attrs[k]);
+  }
+  (Array.isArray(children)?children:[children]).forEach(c=>{
+    if(c==null) return;
+    if(typeof c === 'string') e.appendChild(document.createTextNode(c));
+    else e.appendChild(c);
+  });
+  return e;
+}
+
+function fmt(n){
+  return Math.round(n).toLocaleString('fr-FR') + ' FCFA';
+}
+
+function showToast(msg){
+  const t = el('div',{class:'toast'},msg);
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2200);
+}
+
+/* ---------- Storage ---------- */
+
+// Sauvegarde locale dans le navigateur (fonctionne une fois le fichier ouvert
+// directement dans Chrome/Firefox/etc. — les données restent sur cet ordinateur
+// et cette app, tant que le cache du navigateur n'est pas vidé).
+async function loadEntreprises(){
+  try{
+    const raw = localStorage.getItem('compta_entreprises');
+    state.entreprises = raw ? JSON.parse(raw) : [];
+  }catch(e){ state.entreprises = []; }
+}
+async function saveEntreprises(){
+  try{
+    localStorage.setItem('compta_entreprises', JSON.stringify(state.entreprises));
+  }catch(e){ showToast('Erreur de sauvegarde — vérifie que le navigateur autorise le stockage local'); }
+}
+async function loadEcritures(entrepriseId){
+  try{
+    const raw = localStorage.getItem('compta_ecritures_'+entrepriseId);
+    state.ecritures = raw ? JSON.parse(raw) : [];
+  }catch(e){ state.ecritures = []; }
+}
+async function saveEcritures(entrepriseId){
+  try{
+    localStorage.setItem('compta_ecritures_'+entrepriseId, JSON.stringify(state.ecritures));
+  }catch(e){ showToast('Erreur de sauvegarde — vérifie que le navigateur autorise le stockage local'); }
+}
+
+function exportData(){
+  const ent = currentEntreprise();
+  const payload = {
+    format:'compta-pme-export-v1',
+    entreprise: {nom:ent.nom, secteur:ent.secteur},
+    exporteLe: new Date().toISOString(),
+    ecritures: state.ecritures,
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'compta_'+ent.nom.replace(/[^a-zA-Z0-9]+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('Export téléchargé — '+state.ecritures.length+' opérations');
+}
+
+function importData(){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    try{
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      if(!payload.ecritures || !Array.isArray(payload.ecritures)) throw new Error('format invalide');
+      const remplacer = confirm(
+        'Importer '+payload.ecritures.length+' opérations pour "'+(payload.entreprise ? payload.entreprise.nom : 'cette entreprise')+'" ?\n\n'+
+        'OK = remplacer toutes les données actuelles de cette entreprise par celles du fichier.\n'+
+        'Annuler = ne rien faire.'
+      );
+      if(!remplacer) return;
+      state.ecritures = payload.ecritures;
+      await saveEcritures(state.currentEntrepriseId);
+      showToast('Import terminé — '+state.ecritures.length+' opérations restaurées');
+      render();
+    }catch(err){
+      showToast('Fichier invalide ou illisible');
+    }
+  };
+  input.click();
+}
+
+/* ---------- Écrans ---------- */
+
+function renderLoading(){
+  return el('div',{class:'panel'}, el('p',{class:'muted'},'Chargement…'));
+}
+
+function renderSelectEntreprise(){
+  const wrap = el('div',{});
+  wrap.appendChild(el('h1',{},'Compta PME'));
+  wrap.appendChild(el('p',{class:'muted'},'Choisis une entreprise ou crée-en une nouvelle.'));
+  const panel = el('div',{class:'panel'});
+  if(state.entreprises.length===0){
+    panel.appendChild(el('div',{class:'empty'},'Aucune entreprise pour le moment.'));
+  } else {
+    state.entreprises.forEach(ent=>{
+      const row = el('div',{class:'row',style:'justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)'});
+      row.appendChild(el('div',{},[
+        el('div',{style:'font-weight:600'},ent.nom),
+        el('div',{class:'muted'},SECTEURS[ent.secteur].label),
+      ]));
+      row.appendChild(el('button',{class:'btn btn-primary',onclick:()=>{
+        state.currentEntrepriseId = ent.id;
+        state.loginPasswordInput='';
+        state.loginError=false;
+        state.screen='login';
+        render();
+      }},'Ouvrir'));
+      panel.appendChild(row);
+    });
+  }
+  wrap.appendChild(panel);
+  wrap.appendChild(el('button',{class:'btn btn-primary btn-block',onclick:()=>{
+    state.newEntreprise={nom:'',secteur:'restauration',password:'',stockInitial:'',soldeEspece:'',soldeOm:'',soldeMomo:'',soldeBanque:''};
+    state.screen='new-entreprise'; render();
+  }},'+ Nouvelle entreprise'));
+  return wrap;
+}
+
+function renderNewEntreprise(){
+  const wrap = el('div',{});
+  wrap.appendChild(el('h1',{},'Nouvelle entreprise'));
+  const panel = el('div',{class:'panel'});
+
+  const fNom = el('div',{class:'field'},[
+    el('label',{},"Nom de l'entreprise"),
+    el('input',{type:'text',value:state.newEntreprise.nom,placeholder:'Ex: La Chancellerie',
+      oninput:e=>state.newEntreprise.nom=e.target.value})
+  ]);
+  panel.appendChild(fNom);
+
+  const fSecteur = el('div',{class:'field'},[
+    el('label',{},'Secteur d\'activité'),
+  ]);
+  const sel = el('select',{onchange:e=>state.newEntreprise.secteur=e.target.value});
+  Object.keys(SECTEURS).forEach(k=>{
+    const opt = el('option',{value:k},SECTEURS[k].label);
+    if(k===state.newEntreprise.secteur) opt.setAttribute('selected','selected');
+    sel.appendChild(opt);
+  });
+  fSecteur.appendChild(sel);
+  panel.appendChild(fSecteur);
+
+  const fPass = el('div',{class:'field'},[
+    el('label',{},'Mot de passe (verrou simple — pas une sécurité forte)'),
+    el('input',{type:'password',value:state.newEntreprise.password,placeholder:'••••',
+      oninput:e=>state.newEntreprise.password=e.target.value})
+  ]);
+  panel.appendChild(fPass);
+
+  wrap.appendChild(panel);
+
+  // --- État initial : ce que l'entreprise possède déjà avant de commencer à utiliser l'app ---
+  const panel2 = el('div',{class:'panel'});
+  panel2.appendChild(el('h2',{},'Situation de départ'));
+  panel2.appendChild(el('p',{class:'muted'},"Ce que l'entreprise possède déjà aujourd'hui. Ça évite de fausser le résultat et la trésorerie dès le premier jour. Laisse à 0 si tu ne sais pas encore — tu pourras corriger plus tard."));
+
+  const fStock = el('div',{class:'field'},[
+    el('label',{},'Valeur du stock de marchandises déjà en sa possession (FCFA)'),
+    el('input',{type:'number',inputmode:'numeric',value:state.newEntreprise.stockInitial,
+      oninput:e=>state.newEntreprise.stockInitial=e.target.value})
+  ]);
+  panel2.appendChild(fStock);
+
+  const grid = el('div',{class:'grid2'});
+  grid.appendChild(el('div',{class:'field'},[
+    el('label',{},'Solde en espèces (FCFA)'),
+    el('input',{type:'number',inputmode:'numeric',value:state.newEntreprise.soldeEspece,
+      oninput:e=>state.newEntreprise.soldeEspece=e.target.value})
+  ]));
+  grid.appendChild(el('div',{class:'field'},[
+    el('label',{},'Solde Orange Money (FCFA)'),
+    el('input',{type:'number',inputmode:'numeric',value:state.newEntreprise.soldeOm,
+      oninput:e=>state.newEntreprise.soldeOm=e.target.value})
+  ]));
+  grid.appendChild(el('div',{class:'field'},[
+    el('label',{},'Solde MTN MoMo (FCFA)'),
+    el('input',{type:'number',inputmode:'numeric',value:state.newEntreprise.soldeMomo,
+      oninput:e=>state.newEntreprise.soldeMomo=e.target.value})
+  ]));
+  grid.appendChild(el('div',{class:'field'},[
+    el('label',{},'Solde bancaire (FCFA)'),
+    el('input',{type:'number',inputmode:'numeric',value:state.newEntreprise.soldeBanque,
+      oninput:e=>state.newEntreprise.soldeBanque=e.target.value})
+  ]));
+  panel2.appendChild(grid);
+  wrap.appendChild(panel2);
+
+  const row = el('div',{class:'row'});
+  row.appendChild(el('button',{class:'btn',onclick:()=>{state.screen='select-entreprise';render();}},'Annuler'));
+  row.appendChild(el('button',{class:'btn btn-primary',onclick:async ()=>{
+    if(!state.newEntreprise.nom.trim()){ showToast('Entre un nom d\'entreprise'); return; }
+    const id = 'ent_'+Date.now();
+    state.entreprises.push({id, nom:state.newEntreprise.nom.trim(), secteur:state.newEntreprise.secteur, password:state.newEntreprise.password});
+    await saveEntreprises();
+    state.currentEntrepriseId = id;
+    state.ecritures = [];
+
+    const today = new Date().toISOString().slice(0,10);
+    const ne = state.newEntreprise;
+    const stockInit = parseFloat(ne.stockInitial)||0;
+    if(stockInit>0){
+      state.ecritures.push({id:'ec_init_stock', date:today, label:'Stock de départ',
+        compte:'31 Stocks', montant:stockInit, sens:'neutre', mode:null, impact:null, type:'inventaire'});
+    }
+    [['espece',ne.soldeEspece,'Solde de départ — Espèces'],
+     ['om',ne.soldeOm,'Solde de départ — Orange Money'],
+     ['momo',ne.soldeMomo,'Solde de départ — MTN MoMo'],
+     ['banque',ne.soldeBanque,'Solde de départ — Banque']
+    ].forEach(([mode,val,label],i)=>{
+      const montant = parseFloat(val)||0;
+      if(montant>0){
+        state.ecritures.push({id:'ec_init_'+mode, date:today, label, compte:null,
+          montant, sens:'entree', mode, impact:null, type:'solde_initial'});
+      }
+    });
+    if(state.ecritures.length>0) await saveEcritures(id);
+
+    state.screen='dashboard';
+    state.currentTab='saisie';
+    resetSaisie();
+    render();
+  }},'Créer et ouvrir')); 
+  wrap.appendChild(row);
+  return wrap;
+}
+
+function renderLogin(){
+  const ent = state.entreprises.find(e=>e.id===state.currentEntrepriseId);
+  const wrap = el('div',{});
+  wrap.appendChild(el('h1',{},ent.nom));
+  wrap.appendChild(el('p',{class:'muted'},'Entre le mot de passe pour continuer.'));
+  const panel = el('div',{class:'panel'});
+  panel.appendChild(el('div',{class:'field'},[
+    el('label',{},'Mot de passe'),
+    el('input',{type:'password',value:state.loginPasswordInput,
+      oninput:e=>state.loginPasswordInput=e.target.value,
+      onkeydown:e=>{if(e.key==='Enter') doLogin();}
+    })
+  ]));
+  if(state.loginError) panel.appendChild(el('p',{style:'color:var(--danger);font-size:13px'},'Mot de passe incorrect.'));
+  wrap.appendChild(panel);
+  const row = el('div',{class:'row'});
+  row.appendChild(el('button',{class:'btn',onclick:()=>{state.screen='select-entreprise';render();}},'Retour'));
+  row.appendChild(el('button',{class:'btn btn-primary',onclick:doLogin},'Entrer'));
+  wrap.appendChild(row);
+  return wrap;
+
+  async function doLogin(){
+    if(state.loginPasswordInput === ent.password || ent.password===''){
+      state.currentEntrepriseId = ent.id;
+      await loadEcritures(ent.id);
+      state.screen='dashboard';
+      state.currentTab='saisie';
+      resetSaisie();
+      render();
+    } else {
+      state.loginError = true;
+      render();
+    }
+  }
+}
+
+function resetSaisie(){
+  state.saisieStep=1;
+  state.saisieModePaiement=null;
+  state.saisieTransactionId=null;
+  state.saisieMontant='';
+  state.saisieContactNom='';
+  state.saisieContactTel='';
+}
+
+function currentEntreprise(){
+  return state.entreprises.find(e=>e.id===state.currentEntrepriseId);
+}
+
+function renderDashboard(){
+  const ent = currentEntreprise();
+  const wrap = el('div',{});
+
+  const top = el('div',{class:'topbar'});
+  top.appendChild(el('div',{},[
+    el('h1',{},ent.nom),
+    el('span',{class:'company-badge'},SECTEURS[ent.secteur].label)
+  ]));
+  top.appendChild(el('button',{class:'btn-ghost',onclick:()=>{state.screen='select-entreprise';render();}},'Changer d\'entreprise'));
+  wrap.appendChild(top);
+
+  const backupRow = el('div',{class:'row',style:'margin-bottom:16px'});
+  backupRow.appendChild(el('button',{class:'btn',onclick:exportData},'⬇ Exporter mes données'));
+  backupRow.appendChild(el('button',{class:'btn',onclick:importData},'⬆ Importer des données'));
+  wrap.appendChild(backupRow);
+
+  // stats rapides
+  wrap.appendChild(renderStats());
+
+  const tabs = el('div',{class:'tabs'});
+  [['saisie','Saisir une opération'],['journal','Journal'],['creances','Créances & dettes'],['etats','États financiers'],['inventaire','Inventaire de stock']].forEach(([k,label])=>{
+    tabs.appendChild(el('div',{class:'tab'+(state.currentTab===k?' active':''),onclick:()=>{state.currentTab=k;resetSaisie();render();}},label));
+  });
+  wrap.appendChild(tabs);
+
+  if(state.currentTab==='saisie') wrap.appendChild(renderSaisie());
+  else if(state.currentTab==='journal') wrap.appendChild(renderJournal());
+  else if(state.currentTab==='creances') wrap.appendChild(renderCreances());
+  else if(state.currentTab==='etats') wrap.appendChild(renderEtats());
+  else if(state.currentTab==='inventaire') wrap.appendChild(renderInventaire());
+
+  return wrap;
+}
+
+function soldeParMode(){
+  const soldes = {espece:0, om:0, momo:0, banque:0};
+  state.ecritures.forEach(ec=>{
+    if(ec.mode && soldes[ec.mode]!==undefined){
+      soldes[ec.mode] += ec.sens==='entree' ? ec.montant : -ec.montant;
+    }
+    if(ec.type==='transfert'){
+      soldes.espece -= ec.montant;
+      soldes.banque += ec.montant;
+    }
+    if(ec.type==='transfert_inverse'){
+      soldes.banque -= ec.montant;
+      soldes.espece += ec.montant;
+    }
+  });
+  return soldes;
+}
+
+function resultatDuMois(){
+  const now = new Date();
+  const ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  let produits=0, charges=0;
+  state.ecritures.forEach(ec=>{
+    if(!ec.date.startsWith(ym)) return;
+    if(ec.impact==='produit') produits += ec.montant;
+    if(ec.impact==='charge') charges += ec.montant;
+  });
+  return {produits, charges, resultat:produits-charges};
+}
+
+function renderStats(){
+  const soldes = soldeParMode();
+  const totalTreso = soldes.espece+soldes.om+soldes.momo+soldes.banque;
+  const res = resultatDuMois();
+  const grid = el('div',{class:'stat-grid',style:'margin-bottom:16px'});
+  grid.appendChild(el('div',{class:'stat'},[el('div',{class:'lbl'},'Trésorerie totale'),el('div',{class:'val'},fmt(totalTreso))]));
+  grid.appendChild(el('div',{class:'stat'},[el('div',{class:'lbl'},'Résultat du mois'),el('div',{class:'val',style: res.resultat>=0?'color:var(--accent-dark)':'color:var(--danger)'},fmt(res.resultat))]));
+  grid.appendChild(el('div',{class:'stat'},[el('div',{class:'lbl'},'Produits du mois'),el('div',{class:'val'},fmt(res.produits))]));
+  grid.appendChild(el('div',{class:'stat'},[el('div',{class:'lbl'},'Charges du mois'),el('div',{class:'val'},fmt(res.charges))]));
+  return grid;
+}
+
+/* ---------- Onglet Saisie ---------- */
+
+function renderSaisie(){
+  const ent = currentEntreprise();
+  const transactions = getTransactionsForSecteur(ent.secteur);
+  const wrap = el('div',{class:'panel'});
+
+  const toggle = el('div',{class:'flow-toggle'});
+  toggle.appendChild(el('div',{class:'flow-btn'+(state.flowMode==='transaction'?' active':''),
+    onclick:()=>{state.flowMode='transaction';resetSaisie();render();}},"Je choisis d'abord l'opération"));
+  toggle.appendChild(el('div',{class:'flow-btn'+(state.flowMode==='montant'?' active':''),
+    onclick:()=>{state.flowMode='montant';resetSaisie();render();}},"Je tape le montant d'abord"));
+  wrap.appendChild(toggle);
+
+  if(state.flowMode==='transaction') wrap.appendChild(renderSaisieParTransaction(transactions));
+  else wrap.appendChild(renderSaisieParMontant(transactions));
+
+  return wrap;
+}
+
+function needsModePaiement(tx){
+  return tx.sens==='entree' || tx.sens==='sortie';
+}
+function needsContact(tx){
+  return !!tx.contact;
+}
+
+function renderSaisieParTransaction(transactions){
+  const box = el('div',{});
+
+  if(state.saisieStep===1){
+    box.appendChild(el('h2',{},'Quelle opération veux-tu enregistrer ?'));
+    const grid = el('div',{class:'choice-grid',style:'margin-top:10px'});
+    transactions.forEach(tx=>{
+      grid.appendChild(el('button',{class:'choice',onclick:()=>{
+        state.saisieTransactionId = tx.id;
+        state.saisieStep = needsModePaiement(tx) ? 2 : (needsContact(tx) ? 3 : 3);
+        render();
+      }}, [tx.label, el('small',{},tx.compte||'')]));
+    });
+    box.appendChild(grid);
+    return box;
+  }
+
+  const tx = transactions.find(t=>t.id===state.saisieTransactionId);
+
+  if(state.saisieStep===2){
+    box.appendChild(el('h2',{},tx.label));
+    box.appendChild(el('p',{class:'muted'},'Par quel moyen de paiement ?'));
+    const grid = el('div',{class:'choice-grid',style:'margin-top:10px'});
+    MODES_PAIEMENT.forEach(m=>{
+      if(tx.sens!=='entree' && tx.sens!=='sortie' && m.id!=='espece') return;
+      grid.appendChild(el('button',{class:'choice',onclick:()=>{
+        state.saisieModePaiement = m.id;
+        state.saisieStep = 3;
+        render();
+      }}, m.label));
+    });
+    box.appendChild(grid);
+    box.appendChild(el('button',{class:'btn-ghost',style:'margin-top:10px',onclick:()=>{state.saisieStep=1;render();}},'← Retour'));
+    return box;
+  }
+
+  if(state.saisieStep===3){
+    box.appendChild(el('h2',{},tx.label));
+    if(state.saisieModePaiement){
+      const modeLabel = MODES_PAIEMENT.find(m=>m.id===state.saisieModePaiement).label;
+      box.appendChild(el('p',{class:'muted'},'Moyen de paiement : '+modeLabel));
+    }
+    box.appendChild(el('div',{class:'field',style:'margin-top:10px'},[
+      el('label',{},'Montant (FCFA)'),
+      el('input',{type:'number',inputmode:'numeric',value:state.saisieMontant,placeholder:'0',
+        oninput:e=>state.saisieMontant=e.target.value,
+        onkeydown:e=>{if(e.key==='Enter') validerSaisie(tx);}
+      })
+    ]));
+    if(needsContact(tx)){
+      box.appendChild(el('div',{class:'divider'}));
+      if(tx.lookup){
+        const {clientsList, fournisseursList} = calculerCreancesDettes();
+        const liste = (tx.lookup==='client' ? clientsList : fournisseursList).filter(x=>x.solde>0);
+        box.appendChild(el('p',{class:'muted'}, tx.lookup==='client' ? 'Quel client règle sa dette ?' : 'Quel fournisseur est payé ?'));
+        if(liste.length===0){
+          box.appendChild(el('p',{style:'color:var(--warn)'},
+            tx.lookup==='client' ? 'Aucune créance client en attente pour le moment.' : 'Aucune dette fournisseur en attente pour le moment.'));
+        } else {
+          const sel = el('select',{onchange:e=>{
+            const idx = e.target.value;
+            if(idx===''){ state.saisieContactNom=''; state.saisieContactTel=''; return; }
+            const item = liste[parseInt(idx)];
+            state.saisieContactNom = item.nom;
+            state.saisieContactTel = item.tel;
+            if(!state.saisieMontant) state.saisieMontant = String(item.solde);
+            render();
+          }});
+          sel.appendChild(el('option',{value:''},'— Choisir —'));
+          liste.forEach((item,i)=>{
+            const opt = el('option',{value:String(i)}, item.nom+' — solde '+fmt(item.solde)+(item.tel?(' ('+item.tel+')'):''));
+            if(state.saisieContactNom===item.nom) opt.setAttribute('selected','selected');
+            sel.appendChild(opt);
+          });
+          box.appendChild(el('div',{class:'field'},sel));
+        }
+      } else {
+        box.appendChild(el('p',{class:'muted'},'Pour le suivi — qui est concerné ?'));
+        box.appendChild(el('div',{class:'grid2'},[
+          el('div',{class:'field'},[
+            el('label',{},'Nom (client ou fournisseur)'),
+            el('input',{type:'text',value:state.saisieContactNom,placeholder:'Ex: Marie Ekwalla',
+              oninput:e=>state.saisieContactNom=e.target.value})
+          ]),
+          el('div',{class:'field'},[
+            el('label',{},'Téléphone (optionnel)'),
+            el('input',{type:'tel',value:state.saisieContactTel,placeholder:'Ex: 6XX XXX XXX',
+              oninput:e=>state.saisieContactTel=e.target.value})
+          ]),
+        ]));
+      }
+    }
+    const row = el('div',{class:'row'});
+    row.appendChild(el('button',{class:'btn',onclick:()=>{state.saisieStep = needsModePaiement(tx)?2:1;render();}},'← Retour'));
+    row.appendChild(el('button',{class:'btn btn-primary',onclick:()=>validerSaisie(tx)},'Enregistrer'));
+    box.appendChild(row);
+    return box;
+  }
+  return box;
+}
+
+function renderSaisieParMontant(transactions){
+  const box = el('div',{});
+  box.appendChild(el('h2',{},'Combien, et pour quoi ?'));
+  box.appendChild(el('div',{class:'field'},[
+    el('label',{},'Montant (FCFA)'),
+    el('input',{type:'number',inputmode:'numeric',value:state.saisieMontant,placeholder:'0',
+      oninput:e=>{state.saisieMontant=e.target.value; render();}
+    })
+  ]));
+
+  if(state.saisieMontant && !isNaN(parseFloat(state.saisieMontant))){
+    box.appendChild(el('p',{class:'muted',style:'margin-top:14px'},'Choisis l\'opération correspondante :'));
+    const grid = el('div',{class:'choice-grid',style:'margin-top:8px'});
+    transactions.forEach(tx=>{
+      grid.appendChild(el('button',{class:'choice',onclick:()=>{
+        state.saisieTransactionId = tx.id;
+        if(needsModePaiement(tx)){
+          state.saisieStep = 2;
+          state.flowMode='transaction';
+          render();
+        } else if(needsContact(tx)){
+          state.saisieStep = 3;
+          state.flowMode='transaction';
+          render();
+        } else {
+          validerSaisie(tx);
+        }
+      }}, [tx.label, el('small',{},tx.compte||'')]));
+    });
+    box.appendChild(grid);
+  }
+  return box;
+}
+
+async function validerSaisie(tx){
+  const montant = parseFloat(state.saisieMontant);
+  if(!montant || montant<=0){ showToast('Entre un montant valide'); return; }
+  if(needsContact(tx) && !state.saisieContactNom.trim()){
+    showToast('Indique au moins le nom, pour pouvoir suivre cette créance/dette');
+    return;
+  }
+  if(tx.lookup){
+    const {clientsList, fournisseursList} = calculerCreancesDettes();
+    const liste = tx.lookup==='client' ? clientsList : fournisseursList;
+    const item = liste.find(x=>x.nom===state.saisieContactNom);
+    const disponible = item ? item.solde : 0;
+    if(montant > disponible + 0.01){
+      showToast('Ce montant dépasse le solde dû ('+fmt(disponible)+') — corrige avant d\'enregistrer');
+      return;
+    }
+  }
+  const ecriture = {
+    id:'ec_'+Date.now(),
+    date:new Date().toISOString().slice(0,10),
+    label:tx.label,
+    compte:tx.compte,
+    montant:montant,
+    sens: (tx.sens==='entree') ? 'entree' : (tx.sens==='sortie' ? 'sortie' : tx.sens),
+    mode: needsModePaiement(tx) ? state.saisieModePaiement : null,
+    impact: tx.impact,
+    type: (tx.sens==='transfert'||tx.sens==='transfert_inverse') ? tx.sens : (tx.sens==='dette' ? 'dette' : (tx.sens==='creance' ? 'creance' : null)),
+    contactNom: needsContact(tx) ? state.saisieContactNom.trim() : null,
+    contactTel: needsContact(tx) ? state.saisieContactTel.trim() : null,
+  };
+  state.ecritures.unshift(ecriture);
+  await saveEcritures(state.currentEntrepriseId);
+  showToast('Opération enregistrée : '+fmt(montant));
+  resetSaisie();
+  render();
+}
+
+/* ---------- Onglet Journal ---------- */
+
+function renderJournal(){
+  const wrap = el('div',{class:'panel'});
+  wrap.appendChild(el('h2',{},'Journal des opérations'));
+  if(state.ecritures.length===0){
+    wrap.appendChild(el('div',{class:'empty'},'Aucune opération enregistrée pour le moment.'));
+    return wrap;
+  }
+  const table = el('table');
+  const thead = el('tr',{},[el('th',{},'Date'),el('th',{},'Opération'),el('th',{},'Compte'),el('th',{},'Contact / mode'),el('th',{class:'num'},'Montant'),el('th',{},'')]);
+  table.appendChild(thead);
+  state.ecritures.forEach(ec=>{
+    const modeLabel = ec.mode ? MODES_PAIEMENT.find(m=>m.id===ec.mode).label : (ec.contactNom ? ec.contactNom : '—');
+    const signe = (ec.sens==='sortie') ? '-' : (ec.sens==='entree' ? '+' : '');
+
+    if(state.editingEcritureId===ec.id){
+      const montantCell = el('td',{},el('input',{type:'number',inputmode:'numeric',value:state.editingMontantValue,
+        oninput:e=>state.editingMontantValue=e.target.value,
+        onkeydown:e=>{if(e.key==='Enter') enregistrerModificationMontant(ec);}
+      }));
+      const actionsCell = el('td',{},el('div',{class:'row',style:'gap:6px;flex-wrap:nowrap'},[
+        el('button',{class:'btn',style:'padding:6px 10px;font-size:12.5px',onclick:()=>enregistrerModificationMontant(ec)},'Enregistrer'),
+        el('button',{class:'btn',style:'padding:6px 10px;font-size:12.5px',onclick:()=>{state.editingEcritureId=null;render();}},'Annuler'),
+      ]));
+      table.appendChild(el('tr',{},[
+        el('td',{},ec.date),
+        el('td',{},ec.label),
+        el('td',{class:'muted'},ec.compte||''),
+        el('td',{},modeLabel),
+        montantCell,
+        actionsCell,
+      ]));
+    } else {
+      table.appendChild(el('tr',{},[
+        el('td',{},ec.date),
+        el('td',{},ec.label),
+        el('td',{class:'muted'},ec.compte||''),
+        el('td',{},modeLabel),
+        el('td',{class:'num'},signe+fmt(ec.montant)),
+        el('td',{},el('button',{class:'btn-ghost',style:'font-size:12.5px',onclick:()=>{
+          state.editingEcritureId=ec.id;
+          state.editingMontantValue=String(ec.montant);
+          render();
+        }},'Modifier')),
+      ]));
+    }
+  });
+  wrap.appendChild(table);
+  wrap.appendChild(el('p',{class:'muted',style:'margin-top:10px'},
+    "Seul le montant peut être corrigé — la nature de l'opération ne change pas. Pour une erreur de type d'opération, contacte-moi."));
+  return wrap;
+}
+
+function estUnReglement(ec){
+  return !!ec.contactNom && (
+    (ec.compte==='411 Clients' && ec.sens==='entree') ||
+    (ec.compte==='401 Fournisseurs' && ec.sens==='sortie')
+  );
+}
+
+async function enregistrerModificationMontant(ec){
+  const nouveauMontant = parseFloat(state.editingMontantValue);
+  if(!nouveauMontant || nouveauMontant<=0){ showToast('Entre un montant valide'); return; }
+
+  if(estUnReglement(ec)){
+    const lookupType = ec.compte==='411 Clients' ? 'client' : 'fournisseur';
+    const {clientsList, fournisseursList} = calculerCreancesDettes(ec.id);
+    const liste = lookupType==='client' ? clientsList : fournisseursList;
+    const item = liste.find(x=>x.nom===ec.contactNom);
+    const disponible = item ? item.solde : 0;
+    if(nouveauMontant > disponible + 0.01){
+      showToast('Ce montant dépasse le solde dû ('+fmt(disponible)+') — corrige avant d\'enregistrer');
+      return;
+    }
+  }
+
+  const target = state.ecritures.find(e=>e.id===ec.id);
+  target.montant = nouveauMontant;
+  await saveEcritures(state.currentEntrepriseId);
+  state.editingEcritureId = null;
+  showToast('Montant modifié');
+  render();
+}
+
+/* ---------- Onglet Créances & dettes ---------- */
+
+function calculerCreancesDettes(excludeId){
+  const clients = {}; // key nom -> {nom, tel, du, encaisse}
+  const fournisseurs = {};
+
+  state.ecritures.forEach(ec=>{
+    if(excludeId && ec.id===excludeId) return;
+    if(!ec.contactNom) return;
+    const key = ec.contactNom.trim().toLowerCase();
+    if(ec.type==='creance'){
+      if(!clients[key]) clients[key] = {nom:ec.contactNom, tel:ec.contactTel||'', du:0, encaisse:0};
+      clients[key].du += ec.montant;
+      if(ec.contactTel && !clients[key].tel) clients[key].tel = ec.contactTel;
+    }
+    if(ec.compte==='411 Clients' && ec.sens==='entree'){
+      if(!clients[key]) clients[key] = {nom:ec.contactNom, tel:ec.contactTel||'', du:0, encaisse:0};
+      clients[key].encaisse += ec.montant;
+      if(ec.contactTel && !clients[key].tel) clients[key].tel = ec.contactTel;
+    }
+    if(ec.type==='dette'){
+      if(!fournisseurs[key]) fournisseurs[key] = {nom:ec.contactNom, tel:ec.contactTel||'', du:0, paye:0};
+      fournisseurs[key].du += ec.montant;
+      if(ec.contactTel && !fournisseurs[key].tel) fournisseurs[key].tel = ec.contactTel;
+    }
+    if(ec.compte==='401 Fournisseurs' && ec.sens==='sortie'){
+      if(!fournisseurs[key]) fournisseurs[key] = {nom:ec.contactNom, tel:ec.contactTel||'', du:0, paye:0};
+      fournisseurs[key].paye += ec.montant;
+      if(ec.contactTel && !fournisseurs[key].tel) fournisseurs[key].tel = ec.contactTel;
+    }
+  });
+
+  const clientsList = Object.values(clients).map(c=>({...c, solde:c.du-c.encaisse})).filter(c=>c.solde!==0 || c.du>0);
+  const fournisseursList = Object.values(fournisseurs).map(f=>({...f, solde:f.du-f.paye})).filter(f=>f.solde!==0 || f.du>0);
+  clientsList.sort((a,b)=>b.solde-a.solde);
+  fournisseursList.sort((a,b)=>b.solde-a.solde);
+  return {clientsList, fournisseursList};
+}
+
+function renderCreances(){
+  const {clientsList, fournisseursList} = calculerCreancesDettes();
+  const wrap = el('div',{});
+
+  const panelC = el('div',{class:'panel'});
+  panelC.appendChild(el('h2',{},'Clients qui doivent de l\'argent'));
+  if(clientsList.length===0){
+    panelC.appendChild(el('div',{class:'empty'},'Aucune créance client enregistrée.'));
+  } else {
+    const t = el('table');
+    t.appendChild(el('tr',{},[el('th',{},'Client'),el('th',{},'Téléphone'),el('th',{class:'num'},'Solde restant dû')]));
+    clientsList.forEach(c=>{
+      t.appendChild(el('tr',{},[
+        el('td',{},c.nom),
+        el('td',{class:'muted'},c.tel||'—'),
+        el('td',{class:'num',style: c.solde>0 ? 'color:var(--warn)' : ''},fmt(c.solde)),
+      ]));
+    });
+    panelC.appendChild(t);
+  }
+  wrap.appendChild(panelC);
+
+  const panelF = el('div',{class:'panel'});
+  panelF.appendChild(el('h2',{},'Fournisseurs à payer'));
+  if(fournisseursList.length===0){
+    panelF.appendChild(el('div',{class:'empty'},'Aucune dette fournisseur enregistrée.'));
+  } else {
+    const t = el('table');
+    t.appendChild(el('tr',{},[el('th',{},'Fournisseur'),el('th',{},'Téléphone'),el('th',{class:'num'},'Solde restant à payer')]));
+    fournisseursList.forEach(f=>{
+      t.appendChild(el('tr',{},[
+        el('td',{},f.nom),
+        el('td',{class:'muted'},f.tel||'—'),
+        el('td',{class:'num',style: f.solde>0 ? 'color:var(--danger)' : ''},fmt(f.solde)),
+      ]));
+    });
+    panelF.appendChild(t);
+  }
+  wrap.appendChild(panelF);
+
+  return wrap;
+}
+
+/* ---------- Onglet États financiers ---------- */
+
+function renderEtats(){
+  const wrap = el('div',{});
+
+  const panelRes = el('div',{class:'panel'});
+  panelRes.appendChild(el('h2',{},'Compte de résultat (mois en cours)'));
+  const res = resultatDuMois();
+  const t1 = el('table');
+  t1.appendChild(el('tr',{},[el('td',{},'Produits'),el('td',{class:'num'},fmt(res.produits))]));
+  t1.appendChild(el('tr',{},[el('td',{},'Charges'),el('td',{class:'num'},fmt(res.charges))]));
+  t1.appendChild(el('tr',{style:'font-weight:600'},[el('td',{},'Résultat net'),el('td',{class:'num'},fmt(res.resultat))]));
+  panelRes.appendChild(t1);
+  wrap.appendChild(panelRes);
+
+  const panelTreso = el('div',{class:'panel'});
+  panelTreso.appendChild(el('h2',{},'Position de trésorerie'));
+  const soldes = soldeParMode();
+  const t2 = el('table');
+  MODES_PAIEMENT.forEach(m=>{
+    t2.appendChild(el('tr',{},[el('td',{},m.compte),el('td',{class:'num'},fmt(soldes[m.id]))]));
+  });
+  const total = soldes.espece+soldes.om+soldes.momo+soldes.banque;
+  t2.appendChild(el('tr',{style:'font-weight:600'},[el('td',{},'Total trésorerie'),el('td',{class:'num'},fmt(total))]));
+  panelTreso.appendChild(t2);
+  wrap.appendChild(panelTreso);
+
+  wrap.appendChild(el('button',{class:'btn btn-block',onclick:()=>window.print()},'Imprimer / Exporter en PDF'));
+
+  return wrap;
+}
+
+/* ---------- Onglet Inventaire de stock ---------- */
+
+function renderInventaire(){
+  const wrap = el('div',{class:'panel'});
+  wrap.appendChild(el('h2',{},'Inventaire de fin de mois'));
+  wrap.appendChild(el('p',{class:'muted'},"Entre la valeur totale du stock qu'il te reste aujourd'hui. L'écart avec le mois dernier sera automatiquement enregistré."));
+
+  let dernierInventaire = null;
+  state.ecritures.forEach(ec=>{ if(ec.type==='inventaire' && (!dernierInventaire || ec.date>dernierInventaire.date)) dernierInventaire = ec; });
+  wrap.appendChild(el('p',{class:'muted'}, dernierInventaire ? ('Dernier inventaire enregistré : '+fmt(dernierInventaire.montant)+' le '+dernierInventaire.date) : 'Aucun inventaire enregistré pour l\'instant.'));
+
+  const valInput = {value:''};
+  wrap.appendChild(el('div',{class:'field',style:'margin-top:10px'},[
+    el('label',{},'Valeur du stock actuel (FCFA)'),
+    el('input',{type:'number',inputmode:'numeric',oninput:e=>valInput.value=e.target.value})
+  ]));
+
+  wrap.appendChild(el('button',{class:'btn btn-primary',onclick:async ()=>{
+    const montant = parseFloat(valInput.value);
+    if(!montant && montant!==0){ showToast('Entre une valeur de stock'); return; }
+    const ancien = dernierInventaire ? dernierInventaire.montant : 0;
+    const variation = montant - ancien;
+    state.ecritures.unshift({
+      id:'ec_'+Date.now(), date:new Date().toISOString().slice(0,10),
+      label:'Constat inventaire de stock', compte:'31 Stocks', montant:montant,
+      sens:'neutre', mode:null, impact:null, type:'inventaire',
+    });
+    if(variation !== 0){
+      state.ecritures.unshift({
+        id:'ec_'+(Date.now()+1), date:new Date().toISOString().slice(0,10),
+        label: variation>0 ? 'Variation de stock (augmentation)' : 'Variation de stock (diminution)',
+        compte:'6031 Variation de stocks', montant:Math.abs(variation),
+        sens:'neutre', mode:null, impact: variation>0 ? 'produit' : 'charge', type:'variation_stock',
+      });
+    }
+    await saveEcritures(state.currentEntrepriseId);
+    showToast('Inventaire enregistré');
+    state.currentTab='etats';
+    render();
+  }},'Enregistrer l\'inventaire'));
+
+  return wrap;
+}
+
+/* ---------- Démarrage ---------- */
+
+async function init(){
+  await loadEntreprises();
+  state.screen='select-entreprise';
+  render();
+}
+init();
+</script>
+</body>
+</html>
